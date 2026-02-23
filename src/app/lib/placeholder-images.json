@@ -1,0 +1,23 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-medical",
+      "description": "Professional medical consultation environment",
+      "imageUrl": "https://picsum.photos/seed/med1/1200/600",
+      "imageHint": "medical consultation"
+    },
+    {
+      "id": "hospital-exterior",
+      "description": "Modern hospital building exterior",
+      "imageUrl": "https://picsum.photos/seed/hosp1/800/400",
+      "imageHint": "hospital building"
+    },
+    {
+      "id": "medicine-bottles",
+      "description": "Organized medicine bottles on a shelf",
+      "imageUrl": "https://picsum.photos/seed/meds1/400/300",
+      "imageHint": "medicine bottles"
+    }
+  ]
+}
