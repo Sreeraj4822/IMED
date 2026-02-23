@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, AlertCircle, WifiOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { useState, useEffect, useRef } from "react";
+import { Mic, MicOff, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
@@ -13,71 +13,78 @@ interface VoiceInputProps {
 export function VoiceInput({ onTranscript, className }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const recognitionRef = useRef<any>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const clearErrorWithTimeout = (message: string) => {
+  const showError = (message: string) => {
     setError(message);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       setError(null);
-    }, 5000);
+    }, 4000);
   };
 
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
 
-      recognition.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          .map((result: any) => result[0])
-          .map((result: any) => result.transcript)
-          .join('');
-        
-        if (event.results[0].isFinal) {
-          onTranscript(transcript);
-          setIsListening(false);
-        }
-      };
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setError(null);
-      };
-
-      recognition.onerror = (event: any) => {
-        setIsListening(false);
-        switch (event.error) {
-          case 'network':
-            clearErrorWithTimeout('Network issue. Check connection.');
-            break;
-          case 'not-allowed':
-          case 'service-not-allowed':
-            clearErrorWithTimeout('Mic access denied.');
-            break;
-          case 'no-speech':
-            clearErrorWithTimeout('No speech detected.');
-            break;
-          case 'aborted':
-            break;
-          default:
-            clearErrorWithTimeout('Speech error. Try again.');
-        }
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    } else {
-      setError('Not supported');
+    if (!SpeechRecognition) {
+      showError("Voice not supported in this browser.");
+      return;
     }
+
+    const recognition = new SpeechRecognition();
+
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setError(null);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      onTranscript(transcript);
+      recognition.stop();
+    };
+
+    recognition.onerror = (event: any) => {
+      setIsListening(false);
+
+      console.log("Speech error:", event.error);
+
+      switch (event.error) {
+        case "not-allowed":
+        case "service-not-allowed":
+          showError("Microphone permission denied.");
+          break;
+
+        case "no-speech":
+          showError("No speech detected. Try again.");
+          break;
+
+        case "audio-capture":
+          showError("Microphone not found.");
+          break;
+
+        case "network":
+          showError("Speech service unavailable. Try again.");
+          break;
+
+        default:
+          showError("Voice input failed.");
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
 
     return () => {
       if (recognitionRef.current) {
@@ -90,25 +97,20 @@ export function VoiceInput({ onTranscript, className }: VoiceInputProps) {
   }, [onTranscript]);
 
   const toggleListening = () => {
-    if (!navigator.onLine) {
-      clearErrorWithTimeout('You are offline.');
-      return;
-    }
-
     if (!recognitionRef.current) {
-      clearErrorWithTimeout('Browser not supported.');
+      showError("Voice not supported.");
       return;
     }
 
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      try {
+    try {
+      if (isListening) {
+        recognitionRef.current.stop();
+      } else {
         recognitionRef.current.start();
-      } catch (err) {
-        console.warn('Speech recognition start failed:', err);
-        setIsListening(false);
       }
+    } catch (err) {
+      console.warn("Speech start error:", err);
+      setIsListening(false);
     }
   };
 
@@ -131,20 +133,16 @@ export function VoiceInput({ onTranscript, className }: VoiceInputProps) {
           <Mic className="h-5 w-5" />
         )}
       </Button>
-      
+
       {isListening && (
-        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-destructive/10 text-destructive px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest whitespace-nowrap animate-in fade-in slide-in-from-top-1">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
-          </span>
-          Listening
+        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-destructive/10 text-destructive px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-1">
+          Listening...
         </div>
       )}
 
       {error && !isListening && (
-        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-destructive text-white px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap animate-in fade-in zoom-in-95 shadow-lg">
-          {error.includes('Network') || error.includes('offline') ? <WifiOff className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-destructive text-white px-2 py-0.5 rounded text-[10px] font-bold animate-in fade-in zoom-in-95 shadow-lg">
+          <AlertCircle className="h-3 w-3 inline mr-1" />
           {error}
         </div>
       )}

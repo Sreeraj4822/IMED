@@ -44,7 +44,7 @@ export default function BloodReportPage() {
     const loadLibs = async () => {
       try {
         const [pdfjs, mammoth] = await Promise.all([
-          import("pdfjs-dist/legacy/build/pdf"), // ✅ Vercel-safe import
+          import("pdfjs-dist/legacy/build/pdf"),
           import("mammoth"),
         ]);
 
@@ -56,16 +56,14 @@ export default function BloodReportPage() {
         pdfjsRef.current = pdfModule;
         mammothRef.current = mammoth;
       } catch (err) {
-        console.error("Failed to load document processing libraries:", err);
+        console.error("Failed to load document libraries:", err);
       }
     };
 
     loadLibs();
   }, []);
 
-  /* ===============================
-     PDF TEXT EXTRACTION
-     =============================== */
+  /* =============================== */
   const extractTextFromPDF = async (arrayBuffer: ArrayBuffer) => {
     if (!pdfjsRef.current) throw new Error("PDF library not loaded");
 
@@ -82,9 +80,7 @@ export default function BloodReportPage() {
     return fullText;
   };
 
-  /* ===============================
-     FILE UPLOAD HANDLER
-     =============================== */
+  /* =============================== */
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -108,7 +104,8 @@ export default function BloodReportPage() {
         setReportPhoto(null);
         setIsLoading(false);
       } else if (
-        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        file.type ===
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
         file.name.endsWith(".docx")
       ) {
         if (!mammothRef.current) throw new Error("Word library not loaded");
@@ -138,9 +135,7 @@ export default function BloodReportPage() {
     }
   };
 
-  /* ===============================
-     ANALYSIS
-     =============================== */
+  /* =============================== */
   const handleAnalysis = async () => {
     if (!reportText.trim() && !reportPhoto) {
       toast({
@@ -180,21 +175,19 @@ export default function BloodReportPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
-  /* ===============================
-     UI
-     =============================== */
+  /* =============================== */
   return (
-    <div className="container mx-auto px-4 py-12 max-w-5xl">
-      <div className="flex items-center gap-3 mb-8">
+    <div className="container mx-auto px-4 py-12 max-w-6xl">
+      <div className="flex items-center gap-3 mb-8 print:hidden">
         <div className="bg-primary/10 p-3 rounded-2xl">
           <FileText className="h-8 w-8 text-primary" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-primary">Blood Report Analyzer</h1>
+          <h1 className="text-3xl font-bold text-primary">
+            Blood Report Analyzer
+          </h1>
           <p className="text-muted-foreground">
             Get instant AI insights from lab results.
           </p>
@@ -216,12 +209,10 @@ export default function BloodReportPage() {
                 className="hidden"
                 accept="image/*,.pdf,.docx"
               />
-
               <Button onClick={() => fileInputRef.current?.click()}>
                 <Upload className="h-4 w-4 mr-2" />
                 Choose File
               </Button>
-
               {fileName && <p className="mt-3 text-sm">{fileName}</p>}
             </CardContent>
           </Card>
@@ -240,11 +231,7 @@ export default function BloodReportPage() {
           </Card>
 
           <div className="flex justify-center mt-6">
-            <Button
-              size="lg"
-              onClick={handleAnalysis}
-              disabled={isLoading}
-            >
+            <Button size="lg" onClick={handleAnalysis} disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Activity className="h-4 w-4 mr-2 animate-spin" />
@@ -258,7 +245,7 @@ export default function BloodReportPage() {
         </>
       ) : (
         <>
-          <Alert className="mb-6">
+          <Alert className="mb-6 print:hidden">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Medical Disclaimer</AlertTitle>
             <AlertDescription>
@@ -266,6 +253,7 @@ export default function BloodReportPage() {
             </AlertDescription>
           </Alert>
 
+          {/* SUMMARY */}
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Summary</CardTitle>
@@ -273,7 +261,81 @@ export default function BloodReportPage() {
             <CardContent>{analysis.summary}</CardContent>
           </Card>
 
-          <div className="flex gap-4">
+          {/* DETAILED ANALYSIS */}
+          {analysis.detailedAnalysis && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Detailed Clinical Analysis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analysis.detailedAnalysis}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* PARAMETER BREAKDOWN */}
+          {analysis.findings && analysis.findings.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {analysis.findings.map((finding, index) => (
+                <Card
+                  key={index}
+                  className={cn(
+                    "border-l-4",
+                    finding.status === "high"
+                      ? "border-l-red-500"
+                      : finding.status === "low"
+                      ? "border-l-blue-500"
+                      : "border-l-green-500"
+                  )}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex justify-between mb-2">
+                      <h4 className="font-bold">{finding.parameter}</h4>
+                      <Badge
+                        variant={
+                          finding.status === "high"
+                            ? "destructive"
+                            : finding.status === "low"
+                            ? "default"
+                            : "secondary"
+                        }
+                        className="capitalize"
+                      >
+                        {finding.status === "high" && (
+                          <ArrowUp className="h-3 w-3 mr-1" />
+                        )}
+                        {finding.status === "low" && (
+                          <ArrowDown className="h-3 w-3 mr-1" />
+                        )}
+                        {finding.status}
+                      </Badge>
+                    </div>
+                    <p className="text-xl font-bold">
+                      {finding.value} {finding.unit}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Ref: {finding.referenceRange}
+                    </p>
+                    <p className="text-sm mt-2 text-muted-foreground">
+                      {finding.explanation}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* RECOMMENDATIONS */}
+          {analysis.recommendations && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Doctor Consultation Prep</CardTitle>
+              </CardHeader>
+              <CardContent>{analysis.recommendations}</CardContent>
+            </Card>
+          )}
+
+          <div className="flex gap-4 print:hidden">
             <Button onClick={handlePrint}>
               <Printer className="h-4 w-4 mr-2" />
               Print
