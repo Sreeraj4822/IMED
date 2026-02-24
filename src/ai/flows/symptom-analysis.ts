@@ -1,11 +1,4 @@
 'use server';
-/**
- * @fileOverview A medical assistant that analyzes user-provided symptoms.
- *
- * - analyzeSymptoms - A function that handles the symptom analysis process.
- * - SymptomAnalysisInput - The input type for the analyzeSymptoms function.
- * - SymptomAnalysisOutput - The return type for the analyzeSymptoms function.
- */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
@@ -32,12 +25,15 @@ const symptomAnalysisPrompt = ai.definePrompt({
   prompt: `You are a helpful and professional medical assistant.
 Your task is to analyze a user's described symptoms and provide:
 1. A list of potential medical conditions that could be associated with these symptoms.
-2. Clear and appropriate recommendations for next steps (e.g., "Consult a doctor for further evaluation", "Monitor symptoms and rest", "Seek immediate medical attention").
+2. Clear and appropriate recommendations for next steps.
 
 Symptoms: {{{symptoms}}}
 
-Please provide your response in a JSON object with the following structure:
-{{json-schema SymptomAnalysisOutputSchema}}`,
+Please provide your response in a JSON object that matches this structure:
+{
+  "potentialConditions": ["condition1", "condition2"],
+  "recommendations": "string"
+}`,
 });
 
 const symptomAnalysisFlow = ai.defineFlow(
@@ -48,9 +44,11 @@ const symptomAnalysisFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await symptomAnalysisPrompt(input);
+    
     if (!output) {
       throw new Error('No output from symptom analysis prompt.');
     }
+    
     return output;
   }
 );
